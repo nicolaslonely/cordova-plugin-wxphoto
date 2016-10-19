@@ -1,6 +1,6 @@
 module.exports = {
-    pick: function (successCallback, errorCallback) {
-        cordova.exec(successCallback, errorCallback, "WXPhoto", "pick", []);
+    pick: function (successCallback, errorCallback，options) {
+        cordova.exec(successCallback, errorCallback, "WXPhoto", "pick", [options]);
     },
     pickVideo: function(successCallback, errorCallback) {
     	cordova.exec(successCallback, errorCallback, "WXPhoto", "pickVideo", []);

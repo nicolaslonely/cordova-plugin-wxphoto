@@ -1,22 +1,20 @@
 package uuke.xinfu.wxphoto;
 
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Environment;
+import android.util.Log;
 
-import uuke.xinfu.wxphoto.intent.PhotoPickerIntent;
-import uuke.xinfu.wxphoto.intent.VideoPickerIntent;
+import com.netcompss.loader.LoadJNI;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaArgs;
-import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.PluginResult;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import org.apache.cordova.CordovaInterface;
+import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
-
+import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -24,30 +22,8 @@ import org.json.JSONObject;
 import java.io.File;
 import java.util.ArrayList;
 
-
-import android.Manifest;
-import android.app.Activity;
-import android.content.ActivityNotFoundException;
-import android.content.ContentValues;
-import android.content.Intent;
-import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.Bitmap.CompressFormat;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-import android.media.MediaScannerConnection;
-import android.media.MediaScannerConnection.MediaScannerConnectionClient;
-import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Environment;
-import android.provider.MediaStore;
-import android.util.Base64;
-import android.util.Log;
-import android.content.pm.PackageManager;
-
-import com.netcompss.ffmpeg4android.GeneralUtils;
-import com.netcompss.loader.LoadJNI;
+import uuke.xinfu.wxphoto.intent.PhotoPickerIntent;
+import uuke.xinfu.wxphoto.intent.VideoPickerIntent;
 
 public class CDVWXPhoto extends CordovaPlugin {
 
@@ -68,7 +44,7 @@ public class CDVWXPhoto extends CordovaPlugin {
                 try {
                     nomediaFile.createNewFile();
                 } catch (Exception e) {
-                   Log.i("error", "nomedia failure!") ;
+                    Log.i("error", "nomedia failure!") ;
                 }
             }
         }
@@ -89,14 +65,18 @@ public class CDVWXPhoto extends CordovaPlugin {
         return false;
     }
 
-    protected boolean pick(CordovaArgs args, final CallbackContext callbackContext) {
-
+    protected boolean pick(CordovaArgs args, final CallbackContext callbackContext)  {
         final CDVWXPhoto _this = this;
+        int maxTotal = 9;
+        try{
+            maxTotal = args.getInt(0);
+        }catch (JSONException e){
 
+        }
         if(!PermissionHelper.hasPermission(this, permissions[0])) {
             PermissionHelper.requestPermission(this, 0, Manifest.permission.READ_EXTERNAL_STORAGE);
         } else {
-            this.getPicture();
+            this.getPicture(maxTotal);
         }
         // cordova.getThreadPool().execute(new Runnable() {
         //      @Override
@@ -119,7 +99,7 @@ public class CDVWXPhoto extends CordovaPlugin {
         return true;
     }
 
-   protected boolean pickVideo(CordovaArgs args, final CallbackContext callbackContext) {
+    protected boolean pickVideo(CordovaArgs args, final CallbackContext callbackContext) {
         this.callbackContext = callbackContext;
 
         final CDVWXPhoto _this = this;
@@ -167,12 +147,12 @@ public class CDVWXPhoto extends CordovaPlugin {
         return true;
     }
 
-    public void getPicture() {
+    public void getPicture(int maxTotal) {
         final CDVWXPhoto _this = this;
         PhotoPickerIntent intent = new PhotoPickerIntent(_this.cordova.getActivity());
         intent.setSelectModel(SelectModel.MULTI);
         intent.setShowCarema(true); // 是否显示拍照
-        intent.setMaxTotal(1); // 最多选择照片数量，默认为9
+        intent.setMaxTotal(maxTotal); // 最多选择照片数量，默认为9
         //intent.setSelectedPaths(imagePaths); // 已选中的照片地址， 用于回显选中状态
         //startActivityForResult(intent, REQUEST_CAMERA_CODE);
         _this.cordova.startActivityForResult((CordovaPlugin) _this, intent, 1);
@@ -183,20 +163,20 @@ public class CDVWXPhoto extends CordovaPlugin {
         VideoPickerIntent intent = new VideoPickerIntent(_this.cordova.getActivity());
         _this.cordova.startActivityForResult((CordovaPlugin) _this, intent, 2);
     }
-
-    public void onRequestPermissionResult(int requestCode, String[] permissions,
-                                          int[] grantResults) throws JSONException
-    {
-        for(int r:grantResults)
-        {
-            if(r == PackageManager.PERMISSION_DENIED)
-            {
-                this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
-                return;
-            }
-        }
-        getPicture();
-    }
+//
+//    public void onRequestPermissionResult(int requestCode, String[] permissions,
+//                                          int[] grantResults) throws JSONException
+//    {
+//        for(int r:grantResults)
+//        {
+//            if(r == PackageManager.PERMISSION_DENIED)
+//            {
+//                this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
+//                return;
+//            }
+//        }
+//        getPicture(9);
+//    }
 
     /**
      * Called when the camera view exits.
@@ -214,13 +194,16 @@ public class CDVWXPhoto extends CordovaPlugin {
         if (requestCode == 1) {
             ArrayList<String> res = intent.getStringArrayListExtra(PhotoPickerActivity.EXTRA_RESULT);
             Boolean isOrigin = intent.getBooleanExtra(PhotoPickerActivity.EXTRA_ORIGIN, false);
-
+            //返回数组
             try {
-                JSONObject result = new JSONObject();
-                String url = res == null ? "null" : res.get(0);
-                result.put("url", url);
-                result.put("isOrigin", isOrigin);
-                this.callbackContext.success(result);
+                JSONArray array = new JSONArray();
+                for (int i=0;i<res.size();i++){
+                    JSONObject result = new JSONObject();
+                    result.put("url", res.get(i));
+                    result.put("isOrigin", isOrigin);
+                    array.put(i,result);
+                }
+                this.callbackContext.success(array);
             } catch (JSONException e) {
 
             }
