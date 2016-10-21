@@ -4,6 +4,7 @@ package uuke.xinfu.wxphoto;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Environment;
 import android.util.Log;
 
@@ -31,6 +32,7 @@ public class CDVWXPhoto extends CordovaPlugin {
 
     public static final int PERMISSION_DENIED_ERROR = 20;
     protected final static String[] permissions = { Manifest.permission.READ_EXTERNAL_STORAGE };
+    private int maxTotal = 9;
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
@@ -67,7 +69,6 @@ public class CDVWXPhoto extends CordovaPlugin {
 
     protected boolean pick(CordovaArgs args, final CallbackContext callbackContext)  {
         final CDVWXPhoto _this = this;
-        int maxTotal = 9;
         try{
             maxTotal = args.getInt(0);
         }catch (JSONException e){
@@ -76,21 +77,8 @@ public class CDVWXPhoto extends CordovaPlugin {
         if(!PermissionHelper.hasPermission(this, permissions[0])) {
             PermissionHelper.requestPermission(this, 0, Manifest.permission.READ_EXTERNAL_STORAGE);
         } else {
-            this.getPicture(maxTotal);
+            this.getPicture();
         }
-        // cordova.getThreadPool().execute(new Runnable() {
-        //      @Override
-        //      public void run() {
-        //         PhotoPickerIntent intent = new PhotoPickerIntent(_this.cordova.getActivity());
-        //         intent.setSelectModel(SelectModel.MULTI);
-        //         intent.setShowCarema(true); // 是否显示拍照
-        //         intent.setMaxTotal(1); // 最多选择照片数量，默认为9
-        //         //intent.setSelectedPaths(imagePaths); // 已选中的照片地址， 用于回显选中状态
-        //         //startActivityForResult(intent, REQUEST_CAMERA_CODE);
-        //         _this.cordova.startActivityForResult((CordovaPlugin) _this, intent, 1);
-        //      }
-        // });
-
         PluginResult r = new PluginResult(PluginResult.Status.NO_RESULT);
         r.setKeepCallback(true);
         callbackContext.sendPluginResult(r);
@@ -147,7 +135,7 @@ public class CDVWXPhoto extends CordovaPlugin {
         return true;
     }
 
-    public void getPicture(int maxTotal) {
+    public void getPicture() {
         final CDVWXPhoto _this = this;
         PhotoPickerIntent intent = new PhotoPickerIntent(_this.cordova.getActivity());
         intent.setSelectModel(SelectModel.MULTI);
@@ -163,20 +151,20 @@ public class CDVWXPhoto extends CordovaPlugin {
         VideoPickerIntent intent = new VideoPickerIntent(_this.cordova.getActivity());
         _this.cordova.startActivityForResult((CordovaPlugin) _this, intent, 2);
     }
-//
-//    public void onRequestPermissionResult(int requestCode, String[] permissions,
-//                                          int[] grantResults) throws JSONException
-//    {
-//        for(int r:grantResults)
-//        {
-//            if(r == PackageManager.PERMISSION_DENIED)
-//            {
-//                this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
-//                return;
-//            }
-//        }
-//        getPicture(9);
-//    }
+
+    public void onRequestPermissionResult(int requestCode, String[] permissions,
+                                          int[] grantResults) throws JSONException
+    {
+        for(int r:grantResults)
+        {
+            if(r == PackageManager.PERMISSION_DENIED)
+            {
+                this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
+                return;
+            }
+        }
+        this.getPicture();
+    }
 
     /**
      * Called when the camera view exits.
